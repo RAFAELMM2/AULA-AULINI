@@ -36,6 +36,7 @@
     import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
+    // ✅ Sua configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
       authDomain: "aulas-aulaine.firebaseapp.com",
@@ -52,21 +53,25 @@
     const db = getDatabase(app);
     const provider = new GoogleAuthProvider();
 
+    // 👉 Login quando o botão for clicado
     window.loginComGoogle = function () {
       signInWithRedirect(auth, provider);
     };
 
-    getRedirectResult(auth).then((result) => {
-      if (result && result.user) {
-        const user = result.user;
-        const alunoRef = push(ref(db, "sala/alunos"));
-        set(alunoRef, { nome: user.displayName });
-        window.location.href = "sala.html";
-      }
-    }).catch((error) => {
-      console.error("Erro ao autenticar:", error);
-      alert("Erro ao fazer login.");
-    });
+    // 👉 Depois do redirecionamento, salvar aluno e ir para sala
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          const user = result.user;
+          const alunoRef = push(ref(db, "sala/alunos"));
+          set(alunoRef, { nome: user.displayName });
+          window.location.href = "sala.html";
+        }
+      })
+      .catch((error) => {
+        console.error("Erro no login:", error);
+        alert("Erro ao entrar. Verifique o console.");
+      });
   </script>
 </head>
 <body>
