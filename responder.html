@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Responder Prova</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+
+    const firebaseConfig = { /* ... mesma config ... */ };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const provaId = urlParams.get("prova");
+    const nome = localStorage.getItem("nomeAluno") || prompt("Digite seu nome:");
+    localStorage.setItem("nomeAluno", nome);
+
+    get(ref(db, `provas/${provaId}`)).then(snapshot => {
+      const dados = snapshot.val();
+      const questoes = dados.questoes.split("\\n");
+      const div = document.getElementById("questoes");
+      questoes.forEach((q, i) => {
+        div.innerHTML += `<p>${q}</p><textarea id="q${i}"></textarea>`;
+      });
+    });
+
+    window.enviarRespostas = function() {
+      const respostas = {};
+      document.querySelectorAll("textarea").forEach((t, i) => respostas[i] = t.value);
+      set(ref(db, `respostas/${provaId}/${nome}`), respostas).then(() => {
+        alert("Enviado!");
+        window.location.href = "index.html";
+      });
+    }
+  </script>
+</head>
+<body>
+  <h1>Prova</h1>
+  <div id="questoes"></div><br>
+  <button onclick="enviarRespostas()">Enviar</button>
+</body>
+</html>
