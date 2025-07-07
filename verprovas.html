@@ -2,35 +2,76 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Respostas das Provas</title>
+  <title>Ver Provas</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f6fa;
+      padding: 20px;
+      max-width: 1000px;
+      margin: auto;
+    }
+    h1 {
+      color: #2f3640;
+    }
+    pre {
+      background: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+    .resposta {
+      margin-bottom: 30px;
+    }
+  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-    const firebaseConfig = { /* ... mesma config ... */ };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
+      authDomain: "aulas-aulaine.firebaseapp.com",
+      databaseURL: "https://aulas-aulaine-default-rtdb.firebaseio.com",
+      projectId: "aulas-aulaine",
+      storageBucket: "aulas-aulaine.firebasestorage.app",
+      messagingSenderId: "661730307542",
+      appId: "1:661730307542:web:3681f81db1189105d7c877",
+      measurementId: "G-Y304HF848L"
+    };
+
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getDatabase(app);
 
-    window.onload = async () => {
-      const snapshot = await get(ref(db, "respostas"));
-      const div = document.getElementById("respostas");
-      snapshot.forEach(prova => {
-        const bloco = document.createElement("div");
-        bloco.innerHTML = `<h3>Prova: ${prova.key}</h3>`;
-        const dados = prova.val();
-        for (const aluno in dados) {
-          const respostas = dados[aluno];
-          const pre = document.createElement("pre");
-          pre.textContent = `Aluno: ${aluno}\n` + Object.entries(respostas).map(([q, r]) => `Q${parseInt(q)+1}: ${r}`).join("\\n");
-          bloco.appendChild(pre);
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = "index.html";
+
+      const container = document.getElementById("provas");
+      const respostasRef = ref(db, "respostas");
+      const snapshot = await get(respostasRef);
+      const respostas = snapshot.val();
+
+      if (!respostas) {
+        container.innerHTML = "<p>Nenhuma prova respondida ainda.</p>";
+        return;
+      }
+
+      for (const provaId in respostas) {
+        for (const aluno in respostas[provaId]) {
+          const resposta = respostas[provaId][aluno].respostas;
+          const div = document.createElement("div");
+          div.className = "resposta";
+          div.innerHTML = `<h3>${aluno}</h3><pre>${resposta.join("\n\n")}</pre>`;
+          container.appendChild(div);
         }
-        div.appendChild(bloco);
-      });
-    }
+      }
+    });
   </script>
 </head>
 <body>
-  <h1>Ver Provas Respondidas</h1>
-  <div id="respostas"></div>
+  <h1>Respostas das Provas</h1>
+  <div id="provas"></div>
 </body>
 </html>
