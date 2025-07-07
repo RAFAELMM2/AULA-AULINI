@@ -4,11 +4,54 @@
   <meta charset="UTF-8">
   <title>Sala de Aula</title>
   <style>
-    #chat, #alunos { margin-top: 20px; }
-    #chatBox { width: 300px; height: 200px; border: 1px solid #000; overflow-y: scroll; margin-bottom: 10px; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1, h3 {
+      color: #2f3640;
+    }
+    #chatBox {
+      border: 1px solid #ccc;
+      background: white;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      border-radius: 8px;
+    }
+    input[type="text"] {
+      padding: 10px;
+      width: 70%;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px;
+      background: #273c75;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    li {
+      background: white;
+      padding: 5px 10px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getDatabase, ref, onChildAdded, onValue, push, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
     const firebaseConfig = {
@@ -23,63 +66,72 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getDatabase(app);
 
-    const nome = localStorage.getItem("nomeAluno");
-    if (!nome) window.location.href = "index.html";
+    let nome = "";
 
-    const alunosRef = ref(db, "sala/alunos");
-    const chatRef = ref(db, "sala/chat");
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return window.location.href = "index.html";
 
-    onValue(alunosRef, snapshot => {
-      const lista = document.getElementById("listaAlunos");
-      lista.innerHTML = "";
-      snapshot.forEach(child => {
-        const nome = child.val().nome;
-        const li = document.createElement("li");
-        li.textContent = nome;
-        lista.appendChild(li);
+      nome = user.displayName;
+      document.getElementById("alunoNome").textContent = nome;
+
+      // Adiciona o aluno na lista (se ainda não existir)
+      const alunoRef = push(ref(db, "sala/alunos"));
+      set(alunoRef, { nome });
+
+      // Atualiza a lista de alunos
+      const alunosRef = ref(db, "sala/alunos");
+      onValue(alunosRef, snapshot => {
+        const lista = document.getElementById("listaAlunos");
+        lista.innerHTML = "";
+        snapshot.forEach(child => {
+          const nomeAluno = child.val().nome;
+          const li = document.createElement("li");
+          li.textContent = nomeAluno;
+          lista.appendChild(li);
+        });
       });
-    });
 
-    window.enviarMensagem = function() {
-      const msg = document.getElementById("mensagem").value;
-      if (msg.trim() === "") return;
-      push(chatRef, { nome, mensagem: msg });
-      document.getElementById("mensagem").value = "";
+      // Carrega o chat
+      const chatRef = ref(db, "sala/chat");
+      onChildAdded(chatRef, data => {
+        const msg = data.val();
+        const p = document.createElement("p");
+        p.textContent = `${msg.nome}: ${msg.mensagem}`;
+        document.getElementById("chatBox").appendChild(p);
+        document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
+      });
 
-      if (msg === "!prova") window.location.href = "prova.html";
-      if (msg === "!verprovas") window.location.href = "verprovas.html";
-    }
+      document.getElementById("enviar").onclick = () => {
+        const mensagem = document.getElementById("mensagem").value.trim();
+        if (mensagem === "") return;
 
-    onChildAdded(chatRef, data => {
-      const chatBox = document.getElementById("chatBox");
-      const msg = data.val();
-      const p = document.createElement("p");
-      p.textContent = `${msg.nome}: ${msg.mensagem}`;
-      chatBox.appendChild(p);
-      chatBox.scrollTop = chatBox.scrollHeight;
+        push(ref(db, "sala/chat"), {
+          nome,
+          mensagem
+        });
+
+        // Comandos do professor
+        if (mensagem === "!prova") window.location.href = "prova.html";
+        if (mensagem === "!verprovas") window.location.href = "verprovas.html";
+
+        document.getElementById("mensagem").value = "";
+      };
     });
   </script>
 </head>
 <body>
   <h1>Sala de Aula</h1>
-  <h2>Bem-vindo, <span id="alunoNome"></span></h2>
+  <h3>Bem-vindo, <span id="alunoNome"></span></h3>
 
-  <div id="alunos">
-    <h3>Alunos na Sala:</h3>
-    <ul id="listaAlunos"></ul>
-  </div>
+  <h3>Alunos na Sala:</h3>
+  <ul id="listaAlunos"></ul>
 
-  <div id="chat">
-    <h3>Chat:</h3>
-    <div id="chatBox"></div>
-    <input type="text" id="mensagem" placeholder="Digite sua mensagem" />
-    <button onclick="enviarMensagem()">Enviar</button>
-  </div>
-
-  <script>
-    document.getElementById("alunoNome").textContent = localStorage.getItem("nomeAluno");
-  </script>
+  <h3>Chat:</h3>
+  <div id="chatBox"></div>
+  <input type="text" id="mensagem" placeholder="Digite uma mensagem..." />
+  <button id="enviar">Enviar</button>
 </body>
 </html>
