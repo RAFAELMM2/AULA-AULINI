@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Respostas das Provas</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+
+    const firebaseConfig = { /* ... mesma config ... */ };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.onload = async () => {
+      const snapshot = await get(ref(db, "respostas"));
+      const div = document.getElementById("respostas");
+      snapshot.forEach(prova => {
+        const bloco = document.createElement("div");
+        bloco.innerHTML = `<h3>Prova: ${prova.key}</h3>`;
+        const dados = prova.val();
+        for (const aluno in dados) {
+          const respostas = dados[aluno];
+          const pre = document.createElement("pre");
+          pre.textContent = `Aluno: ${aluno}\n` + Object.entries(respostas).map(([q, r]) => `Q${parseInt(q)+1}: ${r}`).join("\\n");
+          bloco.appendChild(pre);
+        }
+        div.appendChild(bloco);
+      });
+    }
+  </script>
+</head>
+<body>
+  <h1>Ver Provas Respondidas</h1>
+  <div id="respostas"></div>
+</body>
+</html>
