@@ -1,0 +1,143 @@
+<!-- index.html - Tela inicial para aluno digitar o nome -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Entrar na Aula</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
+      authDomain: "aulas-aulaine.firebaseapp.com",
+      databaseURL: "https://aulas-aulaine-default-rtdb.firebaseio.com",
+      projectId: "aulas-aulaine",
+      storageBucket: "aulas-aulaine.firebasestorage.app",
+      messagingSenderId: "661730307542",
+      appId: "1:661730307542:web:3681f81db1189105d7c877",
+      measurementId: "G-Y304HF848L"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.entrarNaSala = function() {
+      const nome = document.getElementById("nomeAluno").value.trim();
+      if (nome === "") {
+        alert("Digite um nome!");
+        return;
+      }
+
+      localStorage.setItem("nomeAluno", nome);
+      const alunoRef = push(ref(db, "sala/alunos"));
+      set(alunoRef, { nome });
+      localStorage.setItem("alunoRef", alunoRef.key);
+
+      window.location.href = "sala.html";
+    }
+  </script>
+</head>
+<body>
+  <h1>Bem-vindo à Aula</h1>
+  <input type="text" id="nomeAluno" placeholder="Digite seu nome" />
+  <button onclick="entrarNaSala()">Entrar na Aula</button>
+</body>
+</html>
+
+<!-- sala.html - Sala com lista de alunos e chat -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Sala de Aula</title>
+  <style>
+    #chat, #alunos { margin-top: 20px; }
+    #chatBox { width: 300px; height: 200px; border: 1px solid #000; overflow-y: scroll; margin-bottom: 10px; }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, onChildAdded, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
+      authDomain: "aulas-aulaine.firebaseapp.com",
+      databaseURL: "https://aulas-aulaine-default-rtdb.firebaseio.com",
+      projectId: "aulas-aulaine",
+      storageBucket: "aulas-aulaine.firebasestorage.app",
+      messagingSenderId: "661730307542",
+      appId: "1:661730307542:web:3681f81db1189105d7c877",
+      measurementId: "G-Y304HF848L"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const nome = localStorage.getItem("nomeAluno");
+    if (!nome) window.location.href = "index.html";
+
+    const alunosRef = ref(db, "sala/alunos");
+    const chatRef = ref(db, "sala/chat");
+
+    // Mostrar lista de alunos em tempo real
+    onValue(alunosRef, snapshot => {
+      const lista = document.getElementById("listaAlunos");
+      lista.innerHTML = "";
+      snapshot.forEach(child => {
+        const nome = child.val().nome;
+        const li = document.createElement("li");
+        li.textContent = nome;
+        lista.appendChild(li);
+      });
+    });
+
+    // Enviar mensagem
+    window.enviarMensagem = function() {
+      const msg = document.getElementById("mensagem").value;
+      if (msg.trim() === "") return;
+      push(chatRef, { nome, mensagem: msg });
+      document.getElementById("mensagem").value = "";
+
+      // Comandos admin (apenas demonstração)
+      if (msg === "!prova") {
+        alert("Redirecionando para criador de prova...");
+        window.location.href = "prova.html";
+      }
+      if (msg === "!verprovas") {
+        alert("Abrindo painel de provas...");
+        window.location.href = "verprovas.html";
+      }
+    }
+
+    // Mostrar chat em tempo real
+    onChildAdded(chatRef, data => {
+      const chatBox = document.getElementById("chatBox");
+      const msg = data.val();
+      const p = document.createElement("p");
+      p.textContent = `${msg.nome}: ${msg.mensagem}`;
+      chatBox.appendChild(p);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+  </script>
+</head>
+<body>
+  <h1>Sala de Aula</h1>
+  <h2>Bem-vindo, <span id="alunoNome"></span></h2>
+
+  <div id="alunos">
+    <h3>Alunos na Sala:</h3>
+    <ul id="listaAlunos"></ul>
+  </div>
+
+  <div id="chat">
+    <h3>Chat:</h3>
+    <div id="chatBox"></div>
+    <input type="text" id="mensagem" placeholder="Digite sua mensagem" />
+    <button onclick="enviarMensagem()">Enviar</button>
+  </div>
+
+  <script>
+    document.getElementById("alunoNome").textContent = localStorage.getItem("nomeAluno");
+  </script>
+</body>
+</html>
