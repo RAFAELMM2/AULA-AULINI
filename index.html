@@ -33,7 +33,7 @@
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
     const firebaseConfig = {
@@ -53,18 +53,20 @@
     const provider = new GoogleAuthProvider();
 
     window.loginComGoogle = function () {
-      signInWithPopup(auth, provider)
-        .then(result => {
-          const user = result.user;
-          const alunoRef = push(ref(db, "sala/alunos"));
-          set(alunoRef, { nome: user.displayName });
-          window.location.href = "sala.html";
-        })
-        .catch(error => {
-          console.error(error);
-          alert("Erro ao fazer login.");
-        });
+      signInWithRedirect(auth, provider);
     };
+
+    getRedirectResult(auth).then((result) => {
+      if (result && result.user) {
+        const user = result.user;
+        const alunoRef = push(ref(db, "sala/alunos"));
+        set(alunoRef, { nome: user.displayName });
+        window.location.href = "sala.html";
+      }
+    }).catch((error) => {
+      console.error("Erro ao autenticar:", error);
+      alert("Erro ao fazer login.");
+    });
   </script>
 </head>
 <body>
