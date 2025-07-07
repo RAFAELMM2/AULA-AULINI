@@ -1,58 +1,92 @@
+<!-- sala.html - Sala da Aula com lista e chat -->
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Sala de Aula</title>
+  <title>Sala da Aula</title>
   <style>
     body {
+      margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background: #f0f2f5;
-      padding: 30px;
-      max-width: 800px;
-      margin: auto;
     }
-    h1, h3 {
-      color: #2f3640;
+    header {
+      background: #273c75;
+      color: white;
+      padding: 20px;
+      text-align: center;
     }
-    #chatBox {
-      border: 1px solid #ccc;
-      background: white;
-      padding: 10px;
-      height: 200px;
+    main {
+      display: flex;
+      height: calc(100vh - 80px);
+    }
+    #alunos {
+      width: 250px;
+      background: #dcdde1;
+      padding: 15px;
+      overflow-y: auto;
+    }
+    #chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 15px;
+    }
+    #mensagens {
+      flex: 1;
       overflow-y: auto;
       margin-bottom: 10px;
-      border-radius: 8px;
-    }
-    input[type="text"] {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: white;
       padding: 10px;
-      width: 70%;
-      border-radius: 8px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-right: 5px;
+      border-radius: 5px;
       border: 1px solid #ccc;
     }
     button {
-      padding: 10px;
-      background: #273c75;
+      background: #44bd32;
       color: white;
       border: none;
-      border-radius: 8px;
       cursor: pointer;
-      margin-left: 10px;
     }
-    ul {
-      list-style: none;
-      padding-left: 0;
+    button:hover {
+      background: #4cd137;
     }
-    li {
-      background: white;
-      padding: 5px 10px;
-      border-radius: 6px;
-      margin-bottom: 4px;
+    .mensagem {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
     }
   </style>
+</head>
+<body>
+  <header>
+    <h1>Sala da Aula</h1>
+    <p id="usuario"></p>
+  </header>
+  <main>
+    <div id="alunos">
+      <h3>Alunos na sala</h3>
+      <ul id="listaAlunos"></ul>
+    </div>
+    <div id="chat">
+      <div id="mensagens"></div>
+      <div>
+        <input type="text" id="mensagem" placeholder="Digite sua mensagem...">
+        <button onclick="enviarMensagem()">Enviar</button>
+      </div>
+    </div>
+  </main>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getDatabase, ref, onChildAdded, onValue, push, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+    import { getDatabase, ref, push, set, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
@@ -66,72 +100,42 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getDatabase(app);
 
-    let nome = "";
+    const nome = localStorage.getItem("nomeAluno") || "(Sem Nome)";
+    document.getElementById("usuario").textContent = `Você: ${nome}`;
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) return window.location.href = "index.html";
-
-      nome = user.displayName;
-      document.getElementById("alunoNome").textContent = nome;
-
-      // Adiciona o aluno na lista (se ainda não existir)
-      const alunoRef = push(ref(db, "sala/alunos"));
-      set(alunoRef, { nome });
-
-      // Atualiza a lista de alunos
-      const alunosRef = ref(db, "sala/alunos");
-      onValue(alunosRef, snapshot => {
-        const lista = document.getElementById("listaAlunos");
-        lista.innerHTML = "";
-        snapshot.forEach(child => {
-          const nomeAluno = child.val().nome;
-          const li = document.createElement("li");
-          li.textContent = nomeAluno;
-          lista.appendChild(li);
-        });
+    // Atualizar lista de alunos
+    const listaRef = ref(db, "sala/alunos");
+    onValue(listaRef, (snapshot) => {
+      const ul = document.getElementById("listaAlunos");
+      ul.innerHTML = "";
+      snapshot.forEach(child => {
+        const li = document.createElement("li");
+        li.textContent = child.val().nome;
+        ul.appendChild(li);
       });
-
-      // Carrega o chat
-      const chatRef = ref(db, "sala/chat");
-      onChildAdded(chatRef, data => {
-        const msg = data.val();
-        const p = document.createElement("p");
-        p.textContent = `${msg.nome}: ${msg.mensagem}`;
-        document.getElementById("chatBox").appendChild(p);
-        document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
-      });
-
-      document.getElementById("enviar").onclick = () => {
-        const mensagem = document.getElementById("mensagem").value.trim();
-        if (mensagem === "") return;
-
-        push(ref(db, "sala/chat"), {
-          nome,
-          mensagem
-        });
-
-        // Comandos do professor
-        if (mensagem === "!prova") window.location.href = "prova.html";
-        if (mensagem === "!verprovas") window.location.href = "verprovas.html";
-
-        document.getElementById("mensagem").value = "";
-      };
     });
+
+    // Sistema de chat
+    const mensagensRef = ref(db, "sala/mensagens");
+    onChildAdded(mensagensRef, (snapshot) => {
+      const msg = snapshot.val();
+      const div = document.createElement("div");
+      div.classList.add("mensagem");
+      div.textContent = `${msg.nome}: ${msg.texto}`;
+      document.getElementById("mensagens").appendChild(div);
+    });
+
+    window.enviarMensagem = function () {
+      const texto = document.getElementById("mensagem").value.trim();
+      if (!texto) return;
+      push(mensagensRef, {
+        nome,
+        texto
+      });
+      document.getElementById("mensagem").value = "";
+    };
   </script>
-</head>
-<body>
-  <h1>Sala de Aula</h1>
-  <h3>Bem-vindo, <span id="alunoNome"></span></h3>
-
-  <h3>Alunos na Sala:</h3>
-  <ul id="listaAlunos"></ul>
-
-  <h3>Chat:</h3>
-  <div id="chatBox"></div>
-  <input type="text" id="mensagem" placeholder="Digite uma mensagem..." />
-  <button id="enviar">Enviar</button>
 </body>
 </html>
