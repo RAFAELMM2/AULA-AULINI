@@ -3,41 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <title>Responder Prova</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      margin-bottom: 20px;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    button {
+      background: #44bd32;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-    const firebaseConfig = { /* ... mesma config ... */ };
+    const firebaseConfig = { /* mesmo config de antes */ };
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const auth = getAuth(app);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const provaId = urlParams.get("prova");
-    const nome = localStorage.getItem("nomeAluno") || prompt("Digite seu nome:");
-    localStorage.setItem("nomeAluno", nome);
+    const params = new URLSearchParams(location.search);
+    const provaId = params.get("prova");
 
-    get(ref(db, `provas/${provaId}`)).then(snapshot => {
-      const dados = snapshot.val();
-      const questoes = dados.questoes.split("\\n");
-      const div = document.getElementById("questoes");
+    let questoes = [];
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = "index.html";
+
+      const nome = user.displayName;
+      const snapshot = await get(ref(db, "provas/" + provaId));
+      const prova = snapshot.val();
+      if (!prova) return alert("Prova não encontrada");
+
+      questoes = prova.questoes.split("\n");
+      const container = document.getElementById("questoes");
+
       questoes.forEach((q, i) => {
-        div.innerHTML += `<p>${q}</p><textarea id="q${i}"></textarea>`;
-      });
-    });
+        const label = document.createElement("label");
+        label.textContent = q;
 
-    window.enviarRespostas = function() {
-      const respostas = {};
-      document.querySelectorAll("textarea").forEach((t, i) => respostas[i] = t.value);
-      set(ref(db, `respostas/${provaId}/${nome}`), respostas).then(() => {
-        alert("Enviado!");
-        window.location.href = "index.html";
+        const textarea = document.createElement("textarea");
+        textarea.id = "resposta" + i;
+
+        container.appendChild(label);
+        container.appendChild(textarea);
       });
-    }
+
+      document.getElementById("enviar").onclick = () => {
+        const respostas = questoes.map((_, i) => document.getElementById("resposta" + i).value);
+        set(ref(db, `respostas/${provaId}/${nome}`), { respostas });
+        alert("Prova enviada!");
+      };
+    });
   </script>
 </head>
 <body>
-  <h1>Prova</h1>
-  <div id="questoes"></div><br>
-  <button onclick="enviarRespostas()">Enviar</button>
+  <h1>Responder Prova</h1>
+  <div id="questoes"></div>
+  <button id="enviar">Enviar</button>
 </body>
 </html>
