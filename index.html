@@ -1,44 +1,89 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Login Teste</title>
+  <meta charset="UTF-8" />
+  <title>Entrar na Aula</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    input, button {
+      padding: 12px;
+      font-size: 16px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 280px;
+    }
+    button {
+      background: #273c75;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #192a56;
+    }
+  </style>
 </head>
 <body>
-  <h1>Login com Google (Teste)</h1>
-  <button onclick="loginComGoogle()">Entrar com Google</button>
+  <h1>Entrar na Aula</h1>
+  <input type="text" id="nomeAluno" placeholder="Digite seu nome" />
+  <input type="email" id="emailAluno" placeholder="Digite seu e-mail" />
+  <button onclick="enviarLink()">Pedir Código de Verificação</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getAuth, sendSignInLinkToEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
       authDomain: "aulas-aulaine.firebaseapp.com",
+      databaseURL: "https://aulas-aulaine-default-rtdb.firebaseio.com",
       projectId: "aulas-aulaine",
-      appId: "1:661730307542:web:3681f81db1189105d7c877"
+      storageBucket: "aulas-aulaine.firebasestorage.app",
+      messagingSenderId: "661730307542",
+      appId: "1:661730307542:web:3681f81db1189105d7c877",
+      measurementId: "G-Y304HF848L"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
 
-    window.loginComGoogle = () => {
-      console.log("Clicado!");
-      signInWithRedirect(auth, provider);
+    const actionCodeSettings = {
+      url: window.location.origin + '/verificar.html',
+      handleCodeInApp: true,
     };
 
-    getRedirectResult(auth)
-      .then(result => {
-        if (result && result.user) {
-          console.log("Login OK!", result.user.displayName);
-          alert("Login bem-sucedido! Usuário: " + result.user.displayName);
-        }
-      })
-      .catch(error => {
-        console.error("Erro:", error.message);
-        alert("Erro: " + error.message);
-      });
+    window.enviarLink = function () {
+      const nome = document.getElementById('nomeAluno').value.trim();
+      const email = document.getElementById('emailAluno').value.trim();
+
+      if (!nome || !email) {
+        alert('Preencha nome e e-mail');
+        return;
+      }
+
+      // Salvar temporariamente no localStorage para usar depois
+      localStorage.setItem('nomeAluno', nome);
+      localStorage.setItem('emailAluno', email);
+
+      sendSignInLinkToEmail(auth, email, actionCodeSettings)
+        .then(() => {
+          alert('Link de verificação enviado! Verifique seu e-mail.');
+        })
+        .catch((error) => {
+          console.error(error);
+          alert('Erro ao enviar link: ' + error.message);
+        });
+    };
   </script>
 </body>
 </html>
