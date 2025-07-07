@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Criar Prova</title>
+  <style>
+    textarea { width: 100%; height: 150px; }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+
+    const firebaseConfig = { /* ... mesma config ... */ };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.criarProva = function() {
+      const questoes = document.getElementById("questoes").value.trim();
+      const tempo = document.getElementById("tempo").value;
+      const refProva = push(ref(db, "provas"));
+      const provaId = refProva.key;
+      set(refProva, { questoes, tempo });
+
+      const link = `${window.location.origin}/responder.html?prova=${provaId}`;
+      document.getElementById("link").value = link;
+    }
+  </script>
+</head>
+<body>
+  <h1>Criar Prova</h1>
+  <textarea id="questoes" placeholder="Digite as questões, uma por linha..."></textarea><br><br>
+  <input type="number" id="tempo" placeholder="Tempo em minutos"><br><br>
+  <button onclick="criarProva()">Gerar Link</button><br><br>
+  <input type="text" id="link" readonly style="width: 100%;">
+</body>
+</html>
