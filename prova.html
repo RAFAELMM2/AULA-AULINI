@@ -4,33 +4,106 @@
   <meta charset="UTF-8">
   <title>Criar Prova</title>
   <style>
-    textarea { width: 100%; height: 150px; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f6fa;
+      padding: 40px;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #2f3640;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 20px;
+    }
+
+    textarea, input[type="number"], input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #4cd137;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      margin-top: 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #44bd32;
+    }
+
+    #link {
+      margin-top: 10px;
+    }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-    const firebaseConfig = { /* ... mesma config ... */ };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
+      authDomain: "aulas-aulaine.firebaseapp.com",
+      databaseURL: "https://aulas-aulaine-default-rtdb.firebaseio.com",
+      projectId: "aulas-aulaine",
+      storageBucket: "aulas-aulaine.firebasestorage.app",
+      messagingSenderId: "661730307542",
+      appId: "1:661730307542:web:3681f81db1189105d7c877",
+      measurementId: "G-Y304HF848L"
+    };
+
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const auth = getAuth(app);
 
-    window.criarProva = function() {
+    onAuthStateChanged(auth, user => {
+      if (!user) window.location.href = "index.html";
+    });
+
+    window.criarProva = async function() {
       const questoes = document.getElementById("questoes").value.trim();
       const tempo = document.getElementById("tempo").value;
+
+      if (!questoes || !tempo) {
+        alert("Preencha todos os campos.");
+        return;
+      }
+
       const refProva = push(ref(db, "provas"));
       const provaId = refProva.key;
-      set(refProva, { questoes, tempo });
+      await set(refProva, { questoes, tempo });
 
       const link = `${window.location.origin}/responder.html?prova=${provaId}`;
       document.getElementById("link").value = link;
-    }
+    };
   </script>
 </head>
 <body>
   <h1>Criar Prova</h1>
-  <textarea id="questoes" placeholder="Digite as questões, uma por linha..."></textarea><br><br>
-  <input type="number" id="tempo" placeholder="Tempo em minutos"><br><br>
-  <button onclick="criarProva()">Gerar Link</button><br><br>
-  <input type="text" id="link" readonly style="width: 100%;">
+
+  <label for="questoes">Questões (uma por linha):</label>
+  <textarea id="questoes" placeholder="Ex: O que é HTML?\nO que é CSS?"></textarea>
+
+  <label for="tempo">Tempo (em minutos):</label>
+  <input type="number" id="tempo" placeholder="Ex: 20" />
+
+  <button onclick="criarProva()">Gerar Link da Prova</button>
+
+  <label for="link">Link da Prova:</label>
+  <input type="text" id="link" readonly />
 </body>
 </html>
