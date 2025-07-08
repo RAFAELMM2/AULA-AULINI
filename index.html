@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
   <title>Entrar na Aula</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -14,30 +15,40 @@
       height: 100vh;
       margin: 0;
     }
+    h1 {
+      color: #273c75;
+    }
     input, button {
       padding: 12px;
       font-size: 16px;
       margin-top: 10px;
       border-radius: 8px;
       border: 1px solid #ccc;
-      width: 280px;
+      width: 300px;
+      box-sizing: border-box;
     }
     button {
       background: #273c75;
       color: white;
       border: none;
       cursor: pointer;
+      transition: background 0.2s;
     }
     button:hover {
       background: #192a56;
     }
+    .container {
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <h1>Entrar na Aula</h1>
-  <input type="text" id="nomeAluno" placeholder="Digite seu nome" />
-  <input type="email" id="emailAluno" placeholder="Digite seu e-mail" />
-  <button onclick="enviarLink()">Pedir Código de Verificação</button>
+  <div class="container">
+    <h1>Entrar na Aula</h1>
+    <input type="text" id="nomeAluno" placeholder="Digite seu nome" />
+    <input type="email" id="emailAluno" placeholder="Digite seu e-mail" />
+    <button onclick="enviarLink()">Pedir Código de Verificação</button>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
@@ -58,30 +69,29 @@
     const auth = getAuth(app);
 
     const actionCodeSettings = {
-      url: window.location.origin + '/verificar.html',
-      handleCodeInApp: true,
+      url: "https://rafaelmm2.github.io/AULA-AULINI/verificar.html",
+      handleCodeInApp: true
     };
 
     window.enviarLink = function () {
-      const nome = document.getElementById('nomeAluno').value.trim();
-      const email = document.getElementById('emailAluno').value.trim();
+      const nome = document.getElementById("nomeAluno").value.trim();
+      const email = document.getElementById("emailAluno").value.trim();
 
       if (!nome || !email) {
-        alert('Preencha nome e e-mail');
+        alert("Por favor, preencha seu nome e e-mail.");
         return;
       }
 
-      // Salvar temporariamente no localStorage para usar depois
-      localStorage.setItem('nomeAluno', nome);
-      localStorage.setItem('emailAluno', email);
+      localStorage.setItem("nomeAluno", nome);
+      localStorage.setItem("emailAluno", email);
 
       sendSignInLinkToEmail(auth, email, actionCodeSettings)
         .then(() => {
-          alert('Link de verificação enviado! Verifique seu e-mail.');
+          alert("Link de verificação enviado! Verifique seu e-mail.");
         })
         .catch((error) => {
-          console.error(error);
-          alert('Erro ao enviar link: ' + error.message);
+          console.error("Erro ao enviar link:", error);
+          alert("Erro ao enviar link: " + error.message);
         });
     };
   </script>
