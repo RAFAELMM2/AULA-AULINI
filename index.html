@@ -1,67 +1,71 @@
-<!-- index.html - Tela de login com código enviado por e-mail -->
+<!-- sala.html - Tela da sala com chat, lista de alunos, comandos de professor -->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Entrar na Aula</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sala de Aula</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
+      background: #ecf0f1;
+      margin: 0;
+      display: flex;
+      height: 100vh;
+    }
+    #chatBox, #alunosBox {
+      padding: 20px;
+    }
+    #chatBox {
+      flex: 2;
+      border-right: 1px solid #ccc;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
     }
-    h1 {
+    #mensagens {
+      flex: 1;
+      overflow-y: auto;
+      background: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    #inputMensagem {
+      padding: 10px;
+      font-size: 16px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    #alunosBox {
+      flex: 1;
+      background: #fff;
+      overflow-y: auto;
+      border-left: 1px solid #ccc;
+    }
+    h2 {
+      margin-top: 0;
       color: #273c75;
     }
-    input, button {
-      padding: 12px;
-      font-size: 16px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      width: 300px;
-      box-sizing: border-box;
-    }
-    button {
-      background: #273c75;
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover {
-      background: #192a56;
-    }
-    .container {
-      text-align: center;
-    }
-    #codigoBox {
-      display: none;
+    .mensagem {
+      margin-bottom: 5px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Entrar na Aula</h1>
-    <input type="text" id="nomeAluno" placeholder="Digite seu nome" />
-    <input type="email" id="emailAluno" placeholder="Digite seu e-mail" />
-    <button onclick="enviarCodigo()">Enviar Código por E-mail</button>
-
-    <div id="codigoBox">
-      <input type="text" id="codigoDigitado" placeholder="Digite o código recebido" />
-      <button onclick="verificarCodigo()">Verificar Código</button>
-    </div>
+  <div id="chatBox">
+    <h2>Chat</h2>
+    <div id="mensagens"></div>
+    <input type="text" id="inputMensagem" placeholder="Digite sua mensagem ou comando..." />
+  </div>
+  <div id="alunosBox">
+    <h2>Alunos</h2>
+    <ul id="listaAlunos"></ul>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+    import { getDatabase, ref, push, set, onChildAdded, remove, get, child } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
@@ -77,42 +81,74 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let codigoGerado = "";
+    const nome = localStorage.getItem("nomeAluno") || "Aluno";
+    const isAdmin = nome.toLowerCase().startsWith("prof") || nome === "admin";
 
-    window.enviarCodigo = function () {
-      const nome = document.getElementById("nomeAluno").value.trim();
-      const email = document.getElementById("emailAluno").value.trim();
+    const mensagensRef = ref(db, "sala/mensagens");
+    const alunosRef = ref(db, "sala/alunos");
 
-      if (!nome || !email) {
-        alert("Por favor, preencha seu nome e e-mail.");
-        return;
+    // Listar alunos ao vivo
+    onChildAdded(alunosRef, (snapshot) => {
+      const aluno = snapshot.val();
+      const li = document.createElement("li");
+      li.textContent = aluno.nome;
+      document.getElementById("listaAlunos").appendChild(li);
+    });
+
+    // Receber mensagens ao vivo
+    onChildAdded(mensagensRef, (snapshot) => {
+      const msg = snapshot.val();
+      const div = document.createElement("div");
+      div.className = "mensagem";
+      div.innerHTML = `<strong>${msg.nome}:</strong> ${msg.texto}`;
+      document.getElementById("mensagens").appendChild(div);
+    });
+
+    // Enviar mensagem
+    document.getElementById("inputMensagem").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        const texto = this.value.trim();
+        if (texto === "") return;
+
+        push(mensagensRef, { nome, texto });
+
+        if (isAdmin && texto.startsWith("!")) executarComando(texto);
+
+        this.value = "";
+      }
+    });
+
+    function executarComando(comando) {
+      if (comando.startsWith("!ban ")) {
+        const nomeAlvo = comando.substring(5).trim().toLowerCase();
+        get(alunosRef).then(snapshot => {
+          snapshot.forEach(childSnap => {
+            if ((childSnap.val().nome || "").toLowerCase() === nomeAlvo) {
+              remove(child(ref(db, `sala/alunos/${childSnap.key}`)));
+              alert(`Aluno "${nomeAlvo}" banido.`);
+            }
+          });
+        });
       }
 
-      localStorage.setItem("nomeAluno", nome);
+      else if (comando === "!prova") {
+        const tempo = prompt("Digite o tempo da prova em minutos:");
+        if (!tempo || isNaN(tempo)) return alert("Tempo inválido");
 
-      // Gerar código simples (6 dígitos)
-      codigoGerado = Math.floor(100000 + Math.random() * 900000).toString();
+        const provaId = Date.now();
+        set(ref(db, `provas/${provaId}`), {
+          tempo: Number(tempo),
+          criadaPor: nome,
+          aberta: true
+        });
 
-      // Salvar código no banco (opcional)
-      const codRef = ref(db, `codigos/${email.replace(/\./g, '_')}`);
-      set(codRef, codigoGerado);
+        const link = `https://rafaelmm2.github.io/AULA-AULINI/prova.html?id=${provaId}`;
+        alert("Link da prova copiado: " + link);
+        navigator.clipboard.writeText(link);
+      }
 
-      // Simular envio de e-mail (exibir no alert)
-      alert(`Código enviado para ${email}: ${codigoGerado}`);
-
-      document.getElementById("codigoBox").style.display = "block";
-    }
-
-    window.verificarCodigo = function () {
-      const codigoDigitado = document.getElementById("codigoDigitado").value.trim();
-      if (codigoDigitado === codigoGerado) {
-        // Redirecionar para sala
-        const alunoRef = push(ref(db, "sala/alunos"));
-        set(alunoRef, { nome: localStorage.getItem("nomeAluno") });
-        localStorage.setItem("alunoRef", alunoRef.key);
-        window.location.href = "sala.html";
-      } else {
-        alert("Código incorreto. Verifique seu e-mail.");
+      else if (comando === "!verprovas") {
+        window.location.href = "verprovas.html";
       }
     }
   </script>
