@@ -1,48 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Verificar Código</title>
+  <title>Verificar Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #f0f2f5;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
       margin: 0;
+      color: #273c75;
+      text-align: center;
     }
-    input, button {
-      padding: 12px;
-      font-size: 16px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      width: 300px;
-    }
-    button {
-      background: #273c75;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #192a56;
+    .loading {
+      font-size: 1.2em;
     }
   </style>
 </head>
 <body>
-  <h1>Verificar Código de Login</h1>
-  <p>Abra o link do e-mail para entrar automaticamente, ou cole o link abaixo:</p>
-  <input type="text" id="linkVerificacao" placeholder="Cole aqui o link recebido" />
-  <button onclick="confirmarLogin()">Confirmar</button>
+  <div class="loading">Verificando login, aguarde...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getAuth, isSignInWithEmailLink, signInWithEmailLink } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
@@ -57,43 +41,24 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getDatabase(app);
 
-    window.confirmarLogin = async function () {
-      const link = document.getElementById('linkVerificacao').value.trim() || window.location.href;
-      const email = localStorage.getItem('emailAluno');
-      const nome = localStorage.getItem('nomeAluno');
-
-      if (!email || !nome) {
-        alert('Você precisa entrar pelo index e informar nome e email antes.');
-        return;
-      }
-
-      if (isSignInWithEmailLink(auth, link)) {
+    window.onload = async () => {
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        let email = window.localStorage.getItem('emailForSignIn');
+        if (!email) {
+          email = window.prompt('Por favor, digite seu e-mail para confirmar o login:');
+        }
         try {
-          const result = await signInWithEmailLink(auth, email, link);
-          // Login bem-sucedido
-          const user = result.user;
-
-          // Salvar o aluno na base
-          const alunoRef = push(ref(db, 'sala/alunos'));
-          await set(alunoRef, { nome });
-
-          alert('Login confirmado! Entrando na sala...');
-          window.location.href = 'sala.html';
+          await signInWithEmailLink(auth, email, window.location.href);
+          // Login bem-sucedido! Redirecionar para sala
+          window.location.href = "sala.html";
         } catch (error) {
-          console.error(error);
-          alert('Erro ao confirmar login: ' + error.message);
+          alert("Erro no login: " + error.message);
+          window.location.href = "index.html";
         }
       } else {
-        alert('Link inválido ou expirado.');
-      }
-    };
-
-    // Tenta confirmar automaticamente se for link
-    window.onload = () => {
-      if (isSignInWithEmailLink(auth, window.location.href)) {
-        confirmarLogin();
+        alert("Link inválido ou expirado.");
+        window.location.href = "index.html";
       }
     };
   </script>
