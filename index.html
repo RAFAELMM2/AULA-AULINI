@@ -1,3 +1,4 @@
+<!-- index.html - Tela de login com código enviado por e-mail -->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -40,6 +41,9 @@
     .container {
       text-align: center;
     }
+    #codigoBox {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -47,12 +51,17 @@
     <h1>Entrar na Aula</h1>
     <input type="text" id="nomeAluno" placeholder="Digite seu nome" />
     <input type="email" id="emailAluno" placeholder="Digite seu e-mail" />
-    <button onclick="enviarLink()">Pedir Código de Verificação</button>
+    <button onclick="enviarCodigo()">Enviar Código por E-mail</button>
+
+    <div id="codigoBox">
+      <input type="text" id="codigoDigitado" placeholder="Digite o código recebido" />
+      <button onclick="verificarCodigo()">Verificar Código</button>
+    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, sendSignInLinkToEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getDatabase, ref, set, push } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDur8Rvk6lBrx4ZMHQ5ZKWfG6XcnZNFDOk",
@@ -66,14 +75,11 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    const db = getDatabase(app);
 
-    const actionCodeSettings = {
-      url: "https://rafaelmm2.github.io/AULA-AULINI/verificar.html",
-      handleCodeInApp: true
-    };
+    let codigoGerado = "";
 
-    window.enviarLink = function () {
+    window.enviarCodigo = function () {
       const nome = document.getElementById("nomeAluno").value.trim();
       const email = document.getElementById("emailAluno").value.trim();
 
@@ -83,17 +89,32 @@
       }
 
       localStorage.setItem("nomeAluno", nome);
-      localStorage.setItem("emailAluno", email);
 
-      sendSignInLinkToEmail(auth, email, actionCodeSettings)
-        .then(() => {
-          alert("Link de verificação enviado! Verifique seu e-mail.");
-        })
-        .catch((error) => {
-          console.error("Erro ao enviar link:", error);
-          alert("Erro ao enviar link: " + error.message);
-        });
-    };
+      // Gerar código simples (6 dígitos)
+      codigoGerado = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Salvar código no banco (opcional)
+      const codRef = ref(db, `codigos/${email.replace(/\./g, '_')}`);
+      set(codRef, codigoGerado);
+
+      // Simular envio de e-mail (exibir no alert)
+      alert(`Código enviado para ${email}: ${codigoGerado}`);
+
+      document.getElementById("codigoBox").style.display = "block";
+    }
+
+    window.verificarCodigo = function () {
+      const codigoDigitado = document.getElementById("codigoDigitado").value.trim();
+      if (codigoDigitado === codigoGerado) {
+        // Redirecionar para sala
+        const alunoRef = push(ref(db, "sala/alunos"));
+        set(alunoRef, { nome: localStorage.getItem("nomeAluno") });
+        localStorage.setItem("alunoRef", alunoRef.key);
+        window.location.href = "sala.html";
+      } else {
+        alert("Código incorreto. Verifique seu e-mail.");
+      }
+    }
   </script>
 </body>
 </html>
